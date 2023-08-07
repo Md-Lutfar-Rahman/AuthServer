@@ -3,8 +3,7 @@ const cors = require("cors");
 const { MongoClient, ObjectId } = require("mongodb");
 const bodyParser = require("body-parser");
 
-const uri =
-  "mongodb+srv://themillionactiveusers:themillionactiveusers@cluster0.tgtq6xy.mongodb.net/<YOUR_DATABASE_NAME>?retryWrites=true&w=majority";
+const uri ="mongodb+srv://themillionactiveusers:themillionactiveusers@cluster0.tgtq6xy.mongodb.net/<YOUR_DATABASE_NAME>?retryWrites=true&w=majority";
 
 const app = express();
 const port = 3000;
@@ -39,6 +38,22 @@ app.get("/users", async (req, res) => {
   }
 });
 
+app.get('/users/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    // Assuming 'usersCollection' is your MongoDB collection for users
+    const user = await usersCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!user) {
+      // If the user with the given ID is not found, return a 404 status
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching user' });
+  }
+});
 app.post("/users", async (req, res) => {
   try {
     const newUser = req.body;
@@ -63,7 +78,7 @@ app.put("/users/edit/:id", async (req, res) => {
   try {
     const userId = req.params.id;
     const updatedUser = req.body;
-    const result = await usersCollection.updateOne({ _id: ObjectId(userId) }, { $set: updatedUser });
+    const result = await usersCollection.updateOne({ _id:new ObjectId(userId) }, { $set: updatedUser });
     res.json(updatedUser);
   } catch (error) {
     res.status(500).json({ error: "Error updating user" });
@@ -73,7 +88,7 @@ app.put("/users/edit/:id", async (req, res) => {
 app.delete("/users/delete/:id", async (req, res) => {
   try {
     const userId = req.params.id;
-    const result = await usersCollection.deleteOne({ _id: ObjectId(userId) });
+    const result = await usersCollection.deleteOne({ _id:new ObjectId(userId) });
     res.json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: "Error deleting user" });
@@ -90,21 +105,48 @@ app.get('/pixels', async (req, res) => {
   }
 });
 
-app.post('/pixels', async (req, res) => {
+app.get('/pixels/:id', async (req, res) => {
   try {
-    const pixels = req.body;
-    const result = await pixelsCollection.insertOne(pixels);
-    res.send(result.ops[0]);
+    const id = req.params.id;
+    // Assuming 'pixelsCollection' is your MongoDB collection
+    const pixel = await pixelsCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!pixel) {
+      // If the pixel with the given ID is not found, return a 404 status
+      return res.status(404).json({ error: 'Pixel not found' });
+    }
+
+    res.json(pixel);
   } catch (error) {
-    res.status(500).json({ error: "Error creating pixel" });
+    res.status(500).json({ error: 'Error fetching pixel' });
   }
 });
 
+app.post('/pixels', async (req, res) => {
+  try {
+    const newPixels = req.body;
+    const pixels = await pixelsCollection.find().toArray();
+    if (pixels.find((ob) => ob.trxid === req.body.trxid)) {
+      throw new Error("trxid already exists");
+    } else {
+      const result = await pixelsCollection.insertOne(newPixels);
+      res.status(201).json({
+        email: req.body.email,
+        name: req.body.name,
+        _id: result.insertedId,
+        trxid: req.body.trxid,
+        totalAmount: req.body.totalAmount
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Error creating user" });
+  }
+});
 app.put('/pixels/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const pixel = req.body;
-    const result = await pixelsCollection.updateOne({ _id: ObjectId(id) }, { $set: pixel });
+    const result = await pixelsCollection.updateOne({ _id: new ObjectId(id) }, { $set: pixel });
     res.send(result);
   } catch (error) {
     res.status(500).json({ error: "Error updating pixel" });
@@ -114,7 +156,7 @@ app.put('/pixels/:id', async (req, res) => {
 app.delete('/pixels/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    const result = await pixelsCollection.deleteOne({ _id: ObjectId(id) });
+    const result = await pixelsCollection.deleteOne({ _id: new ObjectId(id) });
     res.send(result);
   } catch (error) {
     res.status(500).json({ error: "Error deleting pixel" });
